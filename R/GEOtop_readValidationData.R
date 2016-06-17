@@ -1,0 +1,283 @@
+NULL
+#'  Read point output from GEOtop for verification of the model results
+#' 
+#'	Read point output from GEOtop for verification of the model results
+#' 
+#' @param wpath			path into simulation folder
+#' @param obs				zoo object, data frame, with specific names of variables used for validate the model results; name conventions according to CF Standard Name Table \url{http://cfconventions.org}.
+#' @param soil_files				boolean, \code{TRUE}: soil files are provided as GEOtop input. \code{FALSE}: soil is parameterized in the geotop.inpts file
+#' @param save_rData				boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)
+#' 
+#' @export
+#' @importFrom stringr str_split 
+#' 
+#' 
+#' @importFrom grDevices dev.off grey grey.colors pdf rainbow rgb 
+#' @importFrom graphics abline axis barplot grid legend lines par plot polygon text title
+#' @importFrom stats aggregate ecdf qqplot sd time window 
+#' @importFrom utils data head read.csv read.table tail
+#' 
+#' @importFrom ggplot2 geom_text 
+#' 
+#' 
+#' 
+#'
+#' @author 	Johannes Brenner
+#' 
+#' @examples 
+#'  ## TO DO 
+#' wpath <- '/home/ecor/activity/2016/eurac2016/Incarico_EURAC/Simulations/B2/B2_BeG_017_DVM_001' 
+#' load(file.path(wpath, "obs", "observation.RData"))
+#' out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
+#' 
+#' 
+#' 
+#
+#
+#
+
+
+
+
+# Function to load GEOtop point simulation output based on observations
+
+#  wpath <- "/run/user/1000/gvfs/smb-share:server=sdcalp01.eurac.edu,share=data2/Simulations/Simulation_GEOtop_1_225_ZH/Vinschgau/SimTraining/BrJ/HiResAlp/1D/Montecini_pnt_1_225_B2_007/"
+#  wpath <- "/run/user/1000/gvfs/smb-share:server=sdcalp01.eurac.edu,share=data2/Simulations/Simulation_GEOtop_1_225_ZH/Vinschgau/SimTraining/BrJ/MonaLisa/1D/Kaltern/sim006"
+#  data("observations_B2")
+#  
+#  load(file.path(wpath, "obs", "observation.RData"))
+#  names(observation) <- c("hour", "day")
+#  obs <- observation
+#  ### ggExtra Geotop_VisSoilWaterRet_gg
+#  obs   <- list(hour=B2_h, day=B2_d)
+
+GEOtop_ReadValidationData <- function(wpath, obs, lookup_tbl_observation=NULL,soil_files=TRUE, save_rData=TRUE,tz="Etc/GMT-1",level=1)
+
+{
+  # source lookup_tbl
+ # lookup_tbl_observation <- NULL ##ec 20150526
+ ## data(lookup_tbl_observation)
+  if (is.null(lookup_tbl_observation)) {
+  	lookup_tbl_observation_csv <- system.file('tool/lookup_tbl_observation.csv',package="geotopAnalysis") 
+  	lookup_tbl_observation     <- read.table(lookup_tbl_observation_csv,sep=";",header=TRUE,stringsAsFactors=FALSE)	 
+  
+  }
+#   lookup_tbl_observation <- apply(lookup_tbl_observation, 2, as.character)
+#   lookup_tbl_observation <- as.data.frame(lookup_tbl_observation)
+  
+# check observation data
+  if (any(names(obs)=="hour") & any(names(obs)=="day"))  {
+	  Donly <- which(! dimnames(obs$day)[2][[1]] %in% dimnames(obs$hour)[2][[1]]) 
+  } else {
+	  Donly <- NULL
+  }
+# get x- , y-coordinates of output points
+  if (level!=1) {	
+  	listpoints <- get.geotop.inpts.keyword.value("PointFile",wpath=wpath,data.frame=TRUE) 
+##  print(listpoints)
+##  stop("CIAO")
+##  if (file.exists(file.path(wpath,"listpoints.txt")))
+  	if (!is.null(listpoints)) {
+#    listpoints <- read.csv(file.path(wpath,"listpoints.txt"))
+     	xpoints <- listpoints$xcoord
+     	ypoints <- listpoints$ycoord
+   	} else {
+    	xpoints <- get.geotop.inpts.keyword.value("CoordinatePointX",wpath=wpath,numeric=T)
+    	ypoints <- get.geotop.inpts.keyword.value("CoordinatePointY",wpath=wpath,numeric=T)
+  	}
+  }
+
+
+# read data from point file (preperation)
+  if (!is.null(Donly)) {
+	  base <- obs$day 
+  } else {
+	  base <- obs$hour
+  }
+  
+#  df_names <- as.data.frame(dimnames(base)[2][[1]])
+#  names(df_names) <- "name"
+#  varPointIn <- merge(df_names, lookup_tbl_observation, by.x="name", by.y = "obs_var")
+#  varPointIn_what_direct <- varPointIn$geotop_what[varPointIn$geotop_where=="PointOutputFile"]
+#  varPointIn_name_direct <- varPointIn$name[varPointIn$geotop_where=="PointOutputFile"]
+#  
+
+ # level <- 1:length(xpoints)
+# read point data with specified keyword  
+  point_data <- get.geotop.inpts.keyword.value(keyword="PointOutputFile", wpath=wpath,
+                                                 raster=FALSE,
+                                                 data.frame=TRUE,
+                                                 level=level, 
+                                                 date_field="Date12.DDMMYYYYhhmm.",
+                                                 tz=tz) ###"Etc/GMT+1")
+  
+#LWnet.W.m2. and SWnet.W.m2. is below the canopy, see also LE and H 
+  ivarpoint <- which(lookup_tbl_observation$geotop_where=="PointOutputFile")
+  gnamespoint <- lookup_tbl_observation$geotop_what[ivarpoint]
+  onamespoint <- lookup_tbl_observation$obs_var[ivarpoint]
+  names(onamespoint) <- gnamespoint
+#  print(names(point_data))
+#  print(gnamespoint)
+#  print(names(point_data) %in% gnamespoint)
+  point_data <- point_data[,names(point_data) %in% gnamespoint]
+  nn <- onamespoint[names(point_data)]
+  names(point_data) <- nn
+  
+  
+  ##### WRITE OUTPUT 
+  
+  nn <- names(point_data)
+  names(nn) <- nn
+  var_out <- lapply(X=nn,FUN=function(x,outdf){outdf[,x]},outdf=point_data)
+  
+  
+  return(var_out)
+  return(list(ivarpoint,point_data,lookup_tbl_observation))
+# get variables direct or sums from point data
+  var_out <- list()
+  for (i in 1:length(varPointIn_what_direct)) 
+  {
+    name <- as.character(varPointIn_name_direct)[i]
+    var <- as.character(varPointIn_what_direct)[i]
+    i_split <- strsplit(as.character(var),"%")
+    
+    if (length(i_split[[1]])==1) {
+      var_out[[name]] <- point_data[,var]
+    } else {
+      if (i_split[[1]][3]=="plus") {
+        var_out[[ i_split[[1]][1] ]] <- point_data[ ,i_split[[1]][1] ]
+        var_out[[ i_split[[1]][2] ]] <- point_data[ ,i_split[[1]][2] ]
+        var_out[[name]] <- point_data[ ,i_split[[1]][1] ] + point_data[ ,i_split[[1]][2] ]
+      } else {
+        var_out[[ i_split[[1]][1] ]] <- point_data[ ,i_split[[1]][1] ]
+        var_out[[ i_split[[1]][2] ]] <- point_data[ ,i_split[[1]][2] ]
+        var_out[[name]] <- point_data[ ,i_split[[1]][1] ] - point_data[ ,i_split[[1]][2] ]
+      }
+   
+    }
+  }
+
+# postprocess LE, H over canopy
+  if ("postprocess_LE" %in% varPointIn$geotop_what) 
+  {
+    LE <- point_data[,c("LEg_veg.W.m2.", "LEg_unveg.W.m2.", "LEv.W.m2.", "Canopy_fraction..." )]
+    names(LE) <- c("g_veg", "g_unveg", "veg", "cf")
+    data <- list(LE=LE)
+    LE <- GEOtop_EfluxOcanopy(data = data)
+    
+    name <- as.character(varPointIn$name[varPointIn$geotop_what%in%"postprocess_LE"])
+    var_out[[name]] <- LE[[1]]
+  }
+  
+  if ("postprocess_H" %in% varPointIn$geotop_what)
+  {
+    H <- point_data[,c("Hg_veg.W.m2.", "Hg_unveg.W.m2.", "Hv.W.m2.", "Canopy_fraction..." )]
+    names(H) <- c("g_veg", "g_unveg", "veg", "cf")
+    data <- list(H=H)
+    H <- GEOtop_EfluxOcanopy(data = data)
+    
+    name <- as.character(varPointIn$name[varPointIn$geotop_what%in%"postprocess_H"])
+    var_out[[name]] <- H[[1]]
+  }
+  
+# postprocess Radiation components
+  if ("postprocess_Rn" %in% varPointIn$geotop_what)
+  {
+   # Rn <- var_out[["net_downward_shortwave_flux"]] + var_out[["net_downward_longwave_flux"]]
+    Rn <- (point_data$SWin.W.m2. - point_data$SWup.W.m2.) + (point_data$LWin.W.m2. - point_data$LWup.W.m2.)
+    
+    name <- as.character(varPointIn$name[varPointIn$geotop_what%in%"postprocess_Rn"])
+    var_out[[name]] <- Rn
+  }  
+  
+# postprocess Energy Budget
+# error = Rn - G - LE - H
+  if ("postprocess_EB" %in% varPointIn$geotop_what)
+  {
+    EB <- var_out[["net_radiation"]] - var_out[["latent_heat_flux_in_air"]] - var_out[["sensible_heat_flux_in_air"]] - 
+          var_out[["soil_heat_flux"]]
+    
+    name <- as.character(varPointIn$name[varPointIn$geotop_what%in%"postprocess_EB"])
+    var_out[[name]] <- EB
+  }
+  
+
+   
+# get soil information
+  if (length(sapply(df_names, grep, pattern="soil_moisture_content", value=T)) > 1 |
+      length(sapply(df_names, grep, pattern="soil_temperature", value=T)) > 1 |
+      length(sapply(df_names, grep, pattern="liquid_soil_water_pressure", value=T)) > 1)
+  {
+    if (soil_files) {
+      soil_input <- get.geotop.inpts.keyword.value(keyword="SoilParFile", wpath=wpath, data.frame=TRUE)
+      soil_thickness <- soil_input[,1]
+    } else {
+      Dz <- soil_thickness <- get.geotop.inpts.keyword.value("SoilLayerThicknesses", numeric = T, wpath=wpath)
+      Kh <-     get.geotop.inpts.keyword.value("NormalHydrConductivity", numeric = T, wpath=wpath)
+      Kv <-     get.geotop.inpts.keyword.value("LateralHydrConductivity", numeric = T, wpath=wpath)
+      vwc_r <-  get.geotop.inpts.keyword.value("ThetaRes", numeric = T, wpath=wpath)
+      vwc_w <-  get.geotop.inpts.keyword.value("WiltingPoint", numeric = T, wpath=wpath)
+      vwc_fc <- get.geotop.inpts.keyword.value("FieldCapacity", numeric = T, wpath=wpath)
+      vwc_s <-  get.geotop.inpts.keyword.value("ThetaSat", numeric = T, wpath=wpath)
+      alpha <-  get.geotop.inpts.keyword.value("AlphaVanGenuchten", numeric = T, wpath=wpath) 
+      n <-      get.geotop.inpts.keyword.value("NVanGenuchten", numeric = T, wpath=wpath)
+      soil_input <- data.frame(Dz,Kh,Kv,vwc_r,vwc_w,vwc_fc,vwc_s,alpha,n)
+    }
+    
+    # output depth in mm
+    soil_head <- diff(c(0,cumsum(soil_thickness)))/2 + c(0,cumsum(soil_thickness))[-length(soil_thickness)-1]
+    
+    soil_file_liq <- get.geotop.inpts.keyword.value(keyword="SoilLiqContentProfileFile", wpath=wpath, data.frame=TRUE)
+    soil_file_ice <- get.geotop.inpts.keyword.value(keyword="SoilIceContentProfileFile", wpath=wpath, data.frame=TRUE)
+    soil_time <- as.POSIXlt(strptime(x = as.character(soil_file_liq[,1]), format = "%d/%m/%Y %H:%M", tz = "Etc/GMT+1"))
+    soil_header <- names(soil_file_liq)[-c(1:6)]
+  }
+  
+# soil moisture content
+  if (length(sapply(df_names, grep, pattern="soil_moisture_content", value=T)) > 1)
+  {
+    names <- sapply(df_names, grep, pattern="soil_moisture_content", value=T)
+    strsplit_names <- str_split(names,"_")
+    split_mat <- matrix(unlist(strsplit_names),nrow = length(names), ncol=length(strsplit_names[[1]]), byrow = T)
+    depth_mm <- as.integer(unique(split_mat[,4]))
+    choice <- sapply(depth_mm, function(x) which.min(abs(soil_head-x)))
+    
+    soil_data_df <- soil_file_liq[,soil_header[choice]] +  soil_file_ice[,soil_header[choice]]
+    soil_data <- zoo(soil_data_df, soil_time)
+    for (i in 1:length(depth_mm)) var_out[[paste("soil_moisture_content_", depth_mm[i], sep="")]] <- soil_data[,i]
+  }  
+  
+# soil water pressure  
+  if (length(sapply(df_names, grep, pattern="liquid_soil_water_pressure", value=T)) > 1)
+  {
+    soil_file <- get.geotop.inpts.keyword.value(keyword="SoilLiqWaterPressProfileFile", wpath=wpath, data.frame=TRUE)
+    
+    names <- sapply(df_names, grep, pattern="liquid_soil_water_pressure", value=T)
+    strsplit_names <- str_split(names,"_")
+    split_mat <- matrix(unlist(strsplit_names),nrow = length(names), ncol=length(strsplit_names[[1]]), byrow = T)
+    depth_mm <- as.integer(unique(split_mat[,5]))
+    choice <- sapply(depth_mm, function(x) which.min(abs(soil_head-x)))
+    
+    soil_data <- zoo(soil_file[,soil_header[choice]], soil_time)
+    for (i in 1:length(depth_mm)) var_out[[paste("liquid_soil_water_pressure_", depth_mm[i], sep="")]] <- soil_data[,i] / (-10)
+  }
+  
+# soil temperature  
+  if (length(sapply(df_names, grep, pattern="soil_temperature", value=T)) > 1)
+  {
+    soil_file <- get.geotop.inpts.keyword.value(keyword="SoilAveragedTempProfileFile", wpath=wpath, data.frame=TRUE)
+    
+    names <- sapply(df_names, grep, pattern="soil_temperature", value=T)
+    strsplit_names <- str_split(names,"_")
+    split_mat <- matrix(unlist(strsplit_names),nrow = length(names), ncol=length(strsplit_names[[1]]), byrow = T)
+    depth_mm <- as.integer(unique(split_mat[,3]))
+    choice <- sapply(depth_mm, function(x) which.min(abs(soil_head-x)))
+    
+    soil_data <- zoo(soil_file[,soil_header[choice]], soil_time)
+    for (i in 1:length(depth_mm)) var_out[[paste("soil_temperature_", depth_mm[i], sep="")]] <- soil_data[,i]
+    
+  }
+  
+  if(save_rData) save(list = "var_out", file = file.path(wpath,"PointOutValidation.RData"))
+  return(var_out)
+}
