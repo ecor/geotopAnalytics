@@ -15,16 +15,16 @@ This R Markdown document is made interactive using Shiny. To learn more, see [In
 ```{r, include=FALSE}
 library(geotopAnalysis)
 library(geotopbricks)
-#if(!require(AnalyseGeotop))
-#{
-#  if(!require("devtools"))
-#  {
-#    install.packages(devtools)
-#    require("devtools")
-#  }
-#  install_github("AnalyseGeotop", "JBrenn")
-#  require("AnalyseGeotop")
-#}
+if(!require("geotopAnalytics"))
+{
+  if(!require("devtools"))
+  {
+    install.packages(devtools)
+    require("devtools")
+  }
+  install_github("ecor/geotopAnalytics")
+  require("AnalyseGeotop")
+}
 
 if(!require("dygraphs"))
 {

@@ -12,15 +12,23 @@ GEOtop_ReadValidationData(wpath, obs, lookup_tbl_observation = NULL,
 
 \item{obs}{zoo object, data frame, with specific names of variables used for validate the model results; name conventions according to CF Standard Name Table \url{http://cfconventions.org}.}
 
+\item{lookup_tbl_observation}{lookup table with observed and GEOtop-simulated variables}
+
 \item{soil_files}{boolean, \code{TRUE}: soil files are provided as GEOtop input. \code{FALSE}: soil is parameterized in the geotop.inpts file}
 
 \item{save_rData}{boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)}
+
+\item{tz}{time zone, see \code{\link{get.geotop.inpts.keyword.value}}. Default is \code{"Etc/GMT-1"}.}
+
+\item{level}{check point index. Default is 1. See \code{\link{get.geotop.inpts.keyword.value}}}
 }
 \description{
 Read point output from GEOtop for verification of the model results
 }
 \examples{
  ## TO DO 
+
+
 wpath <- '/home/ecor/activity/2016/eurac2016/Incarico_EURAC/Simulations/B2/B2_BeG_017_DVM_001' 
 load(file.path(wpath, "obs", "observation.RData"))
 out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)

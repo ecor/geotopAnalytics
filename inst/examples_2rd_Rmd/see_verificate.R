@@ -6,9 +6,9 @@
 
 library(shiny)
 library(rmarkdown)
-library(geotopAnalysis)
 
-runpath <- '/home/ecor/Dropbox/R-packages/geotopAnalysis/inst/examples_2rd_Rmd/VerificateGEOtopPoint.Rmd' 
+
+runpath <- '/home/ecor/Dropbox/R-packages/geotopAnalytics/inst/examples_2rd_Rmd/VerificateGEOtopPoint.Rmd' 
 
 run(runpath)
 

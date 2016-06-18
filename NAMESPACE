@@ -2,6 +2,7 @@
 
 export(GEOtop_EfluxOcanopy)
 export(GEOtop_ReadValidationData)
+importFrom(geotopbricks,get.geotop.inpts.keyword.value)
 importFrom(ggplot2,geom_text)
 importFrom(grDevices,dev.off)
 importFrom(grDevices,grey)

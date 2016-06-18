@@ -5,13 +5,16 @@ NULL
 #' 
 #' @param wpath			path into simulation folder
 #' @param obs				zoo object, data frame, with specific names of variables used for validate the model results; name conventions according to CF Standard Name Table \url{http://cfconventions.org}.
+#' @param lookup_tbl_observation lookup table with observed and GEOtop-simulated variables
+#' @param tz time zone, see \code{\link{get.geotop.inpts.keyword.value}}. Default is \code{"Etc/GMT-1"}.
+#' @param level check point index. Default is 1. See \code{\link{get.geotop.inpts.keyword.value}}
 #' @param soil_files				boolean, \code{TRUE}: soil files are provided as GEOtop input. \code{FALSE}: soil is parameterized in the geotop.inpts file
 #' @param save_rData				boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)
 #' 
 #' @export
 #' @importFrom stringr str_split 
 #' 
-#' 
+#' @importFrom geotopbricks get.geotop.inpts.keyword.value
 #' @importFrom grDevices dev.off grey grey.colors pdf rainbow rgb 
 #' @importFrom graphics abline axis barplot grid legend lines par plot polygon text title
 #' @importFrom stats aggregate ecdf qqplot sd time window 
@@ -26,6 +29,8 @@ NULL
 #' 
 #' @examples 
 #'  ## TO DO 
+#' 
+#' 
 #' wpath <- '/home/ecor/activity/2016/eurac2016/Incarico_EURAC/Simulations/B2/B2_BeG_017_DVM_001' 
 #' load(file.path(wpath, "obs", "observation.RData"))
 #' out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
