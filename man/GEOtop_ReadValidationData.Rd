@@ -4,8 +4,10 @@
 \alias{GEOtop_ReadValidationData}
 \title{Read point output from GEOtop for verification of the model results}
 \usage{
-GEOtop_ReadValidationData(wpath, obs, lookup_tbl_observation = NULL,
-  soil_files = TRUE, save_rData = TRUE, tz = "Etc/GMT-1", level = 1)
+GEOtop_ReadValidationData(wpath, obs = "ObservationProfileFile",
+  lookup_tbl_observation = "ObservationLookupTblFile", soil_files = TRUE,
+  save_rData = TRUE, tz = "Etc/GMT-1", level = 1,
+  inpts.file = "geotop.inpts", merge.output = TRUE)
 }
 \arguments{
 \item{wpath}{path into simulation folder}
@@ -29,14 +31,18 @@ Read point output from GEOtop for verification of the model results
  ## TO DO 
 
 
-wpath <- '/home/ecor/activity/2016/eurac2016/Incarico_EURAC/Simulations/B2/B2_BeG_017_DVM_001' 
-load(file.path(wpath, "obs", "observation.RData"))
-out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
+wpath <- '/home/ecor/activity/2016/eurac2016/idra/B2_BeG_017_DVM_001_test_1' 
+##load(file.path(wpath, "obs", "observation.RData"))
+
+###out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
+
+out <- GEOtop_ReadValidationData(wpath = wpath , save_rData = TRUE)
+
 
 
 
 }
 \author{
-Johannes Brenner
+Johannes Brenner,Emanuele Cordano
 }
 

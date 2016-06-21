@@ -12,31 +12,36 @@ NULL
 #' @param save_rData				boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)
 #' 
 #' @export
-#' @importFrom stringr str_split 
+#' @importFrom stringr str_split str_replace 
 #' 
 #' @importFrom geotopbricks get.geotop.inpts.keyword.value
-#' @importFrom grDevices dev.off grey grey.colors pdf rainbow rgb 
-#' @importFrom graphics abline axis barplot grid legend lines par plot polygon text title
-#' @importFrom stats aggregate ecdf qqplot sd time window 
-#' @importFrom utils data head read.csv read.table tail
-#' 
-#' @importFrom ggplot2 geom_text 
+# @importFrom grDevices dev.off grey grey.colors pdf rainbow rgb 
+# @importFrom graphics abline axis barplot grid legend lines par plot polygon text title
+# @importFrom stats aggregate ecdf qqplot sd time window 
+# @importFrom utils data head read.csv read.table tail
+# 
+# @importFrom ggplot2 geom_text 
 #' 
 #' 
 #' 
 #'
-#' @author 	Johannes Brenner
+#' @author 	Johannes Brenner,Emanuele Cordano
 #' 
 #' @examples 
 #'  ## TO DO 
 #' 
 #' 
-#' wpath <- '/home/ecor/activity/2016/eurac2016/Incarico_EURAC/Simulations/B2/B2_BeG_017_DVM_001' 
-#' load(file.path(wpath, "obs", "observation.RData"))
-#' out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
+#' wpath <- '/home/ecor/activity/2016/eurac2016/idra/B2_BeG_017_DVM_001_test_1' 
+#' ##load(file.path(wpath, "obs", "observation.RData"))
+#' 
+#' ###out <- GEOtop_ReadValidationData(wpath = wpath, obs = observation, save_rData = TRUE)
+#' 
+#' out <- GEOtop_ReadValidationData(wpath = wpath , save_rData = TRUE)
 #' 
 #' 
 #' 
+#' 
+
 #
 #
 #
@@ -56,29 +61,37 @@ NULL
 #  ### ggExtra Geotop_VisSoilWaterRet_gg
 #  obs   <- list(hour=B2_h, day=B2_d)
 
-GEOtop_ReadValidationData <- function(wpath, obs, lookup_tbl_observation=NULL,soil_files=TRUE, save_rData=TRUE,tz="Etc/GMT-1",level=1)
+GEOtop_ReadValidationData <- function(wpath, obs="ObservationProfileFile", lookup_tbl_observation="ObservationLookupTblFile",soil_files=TRUE, save_rData=TRUE,tz="Etc/GMT-1",level=1,inpts.file="geotop.inpts",merge.output=TRUE)
 
 {
   # source lookup_tbl
  # lookup_tbl_observation <- NULL ##ec 20150526
  ## data(lookup_tbl_observation)
+ 
+ 
   if (is.null(lookup_tbl_observation)) {
   	lookup_tbl_observation_csv <- system.file('tool/lookup_tbl_observation.csv',package="geotopAnalysis") 
   	lookup_tbl_observation     <- read.table(lookup_tbl_observation_csv,sep=";",header=TRUE,stringsAsFactors=FALSE)	 
   
+  } else if (identical(lookup_tbl_observation,"ObservationLookupTblFile")) {
+	 
+	  lookup_tbl_observation <- get.geotop.inpts.keyword.value('ObservationLookupTblFile',wpath=wpath,data.frame=TRUE,formatter="",inpts.file=inpts.file)
+ 	
   }
+  
+#  return(lookup_tbl_file_observation)
 #   lookup_tbl_observation <- apply(lookup_tbl_observation, 2, as.character)
 #   lookup_tbl_observation <- as.data.frame(lookup_tbl_observation)
   
 # check observation data
-  if (any(names(obs)=="hour") & any(names(obs)=="day"))  {
-	  Donly <- which(! dimnames(obs$day)[2][[1]] %in% dimnames(obs$hour)[2][[1]]) 
-  } else {
-	  Donly <- NULL
-  }
+#  if (any(names(obs)=="hour") & any(names(obs)=="day"))  {
+#	  Donly <- which(! dimnames(obs$day)[2][[1]] %in% dimnames(obs$hour)[2][[1]]) 
+#  } else {
+#	  Donly <- NULL
+#  }
 # get x- , y-coordinates of output points
   if (level!=1) {	
-  	listpoints <- get.geotop.inpts.keyword.value("PointFile",wpath=wpath,data.frame=TRUE) 
+  	listpoints <- get.geotop.inpts.keyword.value("PointFile",wpath=wpath,data.frame=TRUE,inpts.file=inpts.file) 
 ##  print(listpoints)
 ##  stop("CIAO")
 ##  if (file.exists(file.path(wpath,"listpoints.txt")))
@@ -87,18 +100,18 @@ GEOtop_ReadValidationData <- function(wpath, obs, lookup_tbl_observation=NULL,so
      	xpoints <- listpoints$xcoord
      	ypoints <- listpoints$ycoord
    	} else {
-    	xpoints <- get.geotop.inpts.keyword.value("CoordinatePointX",wpath=wpath,numeric=T)
-    	ypoints <- get.geotop.inpts.keyword.value("CoordinatePointY",wpath=wpath,numeric=T)
+    	xpoints <- get.geotop.inpts.keyword.value("CoordinatePointX",wpath=wpath,numeric=TRUE,inpts.file=inpts.file)
+    	ypoints <- get.geotop.inpts.keyword.value("CoordinatePointY",wpath=wpath,numeric=TRUE,inpts.file=inpts.file)
   	}
   }
 
 
 # read data from point file (preperation)
-  if (!is.null(Donly)) {
-	  base <- obs$day 
-  } else {
-	  base <- obs$hour
-  }
+#  if (!is.null(Donly)) {
+#	  base <- obs$day 
+#  } else {
+#	  base <- obs$hour
+#  }
   
 #  df_names <- as.data.frame(dimnames(base)[2][[1]])
 #  names(df_names) <- "name"
@@ -109,17 +122,35 @@ GEOtop_ReadValidationData <- function(wpath, obs, lookup_tbl_observation=NULL,so
 
  # level <- 1:length(xpoints)
 # read point data with specified keyword  
+  if (obs=="ObservationProfileFile") {
+	  obs_data <- get.geotop.inpts.keyword.value(keyword="ObservationProfileFile", wpath=wpath,
+			  raster=FALSE,
+			  data.frame=TRUE,
+			  level=level, 
+			  date_field="Date12.DDMMYYYYhhmm.",
+			  tz=tz,inpts.file=inpts.file) ###"Etc/GMT+1")
+  } else {
+	  
+	 obs_data <- obs 
+  }
+ 
   point_data <- get.geotop.inpts.keyword.value(keyword="PointOutputFile", wpath=wpath,
                                                  raster=FALSE,
                                                  data.frame=TRUE,
                                                  level=level, 
                                                  date_field="Date12.DDMMYYYYhhmm.",
-                                                 tz=tz) ###"Etc/GMT+1")
+                                                 tz=tz,inpts.file=inpts.file) ###"Etc/GMT+1")
   
+										 
 #LWnet.W.m2. and SWnet.W.m2. is below the canopy, see also LE and H 
+  
+ 
   ivarpoint <- which(lookup_tbl_observation$geotop_where=="PointOutputFile")
   gnamespoint <- lookup_tbl_observation$geotop_what[ivarpoint]
   onamespoint <- lookup_tbl_observation$obs_var[ivarpoint]
+  unitpoint <- as.character(lookup_tbl_observation$unit[ivarpoint])
+  names(unitpoint) <- onamespoint
+  
   names(onamespoint) <- gnamespoint
 #  print(names(point_data))
 #  print(gnamespoint)
@@ -133,11 +164,59 @@ GEOtop_ReadValidationData <- function(wpath, obs, lookup_tbl_observation=NULL,so
   
   nn <- names(point_data)
   names(nn) <- nn
+ 
+  
+  
+  
+  
+ 	out <- NULL
+	
+  
+  if (merge.output==TRUE) {
+	  
+	  start <- index(obs_data)[1]
+	  index(obs_data) <- as.numeric(index(obs_data)-start,units="secs")
+	  index(point_data) <- as.numeric(index(point_data)-start,units="secs")
+	  names(obs_data) <- paste("OBS",names(obs_data),sep="_")
+	  names(point_data) <- paste("SIM",names(point_data),sep="_")
+	  #out <- list(observation=obs_data,simulation=point_data)
+	  #out <- do.call(what=merge,args=out)
+	  out <- merge(obs_data,point_data)
+	  index(out) <- start+index(out)
+	  
+	  ##INSERT ATTRIBUTE
+	  attr(out,"observation_var") <- str_replace(names(obs_data),"OBS_","")
+	  attr(out,"simulation_var") <- str_replace(names(point_data),"SIM_","")
+	  attr(out,"var_unit") <- unitpoint
+	#  iobsnames <- str_detect("OBS",names(alldata))
+	#  isimnames <- str_detect("SIM",names(alldata))
+	  
+	#  obsnames <- names(alldata)[iobsnames]
+	#  simnames <- names(alldata)[isimnames]
+	  
+	#  obsnames <- str_replace(obsnames,"OBS_","")
+	#  simnames <- str_replace(simnames,"SIM_","")
+	  
+  ## TO GO ON .....
+	  
+	  
+	  
+  } else { 
+  
+	  out <- list(observation=obs_data,simulation=point_data)
+  
+  }
+  
+  
+  return(out)
+  
+  
   var_out <- lapply(X=nn,FUN=function(x,outdf){outdf[,x]},outdf=point_data)
   
   
   return(var_out)
   return(list(ivarpoint,point_data,lookup_tbl_observation))
+  
 # get variables direct or sums from point data
   var_out <- list()
   for (i in 1:length(varPointIn_what_direct)) 
