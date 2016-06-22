@@ -75,7 +75,7 @@ GEOtop_ReadValidationData <- function(wpath, obs="ObservationProfileFile", looku
   
   } else if (identical(lookup_tbl_observation,"ObservationLookupTblFile")) {
 	 
-	  lookup_tbl_observation <- get.geotop.inpts.keyword.value('ObservationLookupTblFile',wpath=wpath,data.frame=TRUE,formatter="",inpts.file=inpts.file)
+	  lookup_tbl_observation <- get.geotop.inpts.keyword.value('ObservationLookupTblFile',wpath=wpath,data.frame=TRUE,formatter="",inpts.file=inpts.file,col_sep=";")
  	
   }
   
@@ -134,30 +134,188 @@ GEOtop_ReadValidationData <- function(wpath, obs="ObservationProfileFile", looku
 	 obs_data <- obs 
   }
  
-  point_data <- get.geotop.inpts.keyword.value(keyword="PointOutputFile", wpath=wpath,
+  
+  ### FIND KEYWORDS
+  
+  
+  #### INSERT SOIL DATA 
+  
+  geotop_where_a <- paste(as.character(lookup_tbl_observation$geotop_where),collapse=";")
+  ikeys <- str_locate_all(geotop_where_a,boundary("word"))[[1]]
+ 
+  geotop_where <- sprintf("s%05d",1:nrow(ikeys))
+  
+  for (i in 1:nrow(ikeys)) {
+	  
+	geotop_where[i] <- str_sub(geotop_where_a,start=ikeys[i,1],end=ikeys[i,2])
+	  
+  }
+  geotop_where <- unique(geotop_where)
+  geotop_where <- geotop_where[str_detect(geotop_where,"File")]
+ 
+  
+  
+  ##### INSERT SOIL DATA
+  geotop_soil_where <- geotop_where[str_detect(geotop_where,"Soil")]
+  if (length(geotop_soil_where)>1) {
+	  
+  	names(geotop_soil_where) <- geotop_soil_where
+  
+  	soil_data <- lapply(X=geotop_soil_where,FUN=get.geotop.inpts.keyword.value,wpath=wpath,
+		  raster=FALSE,
+		  data.frame=TRUE,
+		  level=level, 
+		  date_field="Date12.DDMMYYYYhhmm.",
+		  tz=tz,inpts.file=inpts.file,zlayer.formatter="z%04d") ###"Etc/GMT+1")
+  	
+  	ivarsoil <- integer(0)
+ 	for (it in geotop_soil_where) {
+	  
+		ivarsoil <-   c(ivarsoil,which(str_detect(lookup_tbl_observation$geotop_where,it)))
+		ivarsoil <- unique(ivarsoil)
+	  
+  	}
+  
+  #####ivarsoil <- which(any(str_detect(lookup_tbl_observation$geotop_where %in% geotop_soil_where)
+  
+  ####
+  	gnamessoil <- as.character(lookup_tbl_observation$geotop_where[ivarsoil])
+ 	gdepthsoil <-  as.character(lookup_tbl_observation$geotop_what[ivarsoil])
+  	onamessoil <- as.character(lookup_tbl_observation$obs_var[ivarsoil])
+  	names(gnamessoil) <- onamessoil
+  	names(gdepthsoil) <- onamessoil
+	index_time <- index(soil_data[[1]])
+	soil_data <- lapply(X=soil_data,FUN=as.data.frame)
+  	evals_gnamessoil <- lapply(X=gnamessoil,FUN=function(x,envir){
+			  
+			  e <- parse(text=x)
+			 # str(envir)
+			  o <- eval(e,envir=envir)
+			  o <- as.data.frame(o)
+			  return(o)
+		  },envir=soil_data)
+  
+  
+	evals_gnamessoils <- mapply(text=gdepthsoil,envir=evals_gnamessoil,FUN=function(text,envir){ eval(parse(text=text),envir=envir)})
+  	
+	#str(soil_data)
+  	#print(ivarsoil)
+  	#print(names(gdepthsoil))
+  	soil_data <- as.data.frame(evals_gnamessoils)
+  	names(soil_data) <- names(gdepthsoil)
+  	soil_data <- as.zoo(soil_data)
+	#str(index_time)
+	#print(head(index_time))
+	str(soil_data)
+  	index(soil_data) <- index_time
+  	
+  
+  	
+  
+   } else {
+	   
+	   
+	 soil_data <- NULL
+   }
+  
+  
+ 
+  
+  
+  #####  END INSERT SOILDATA
+  if ("PointOutputFile" %in% geotop_where) {
+  
+  
+  		point_data <- get.geotop.inpts.keyword.value(keyword="PointOutputFile", wpath=wpath,
                                                  raster=FALSE,
                                                  data.frame=TRUE,
                                                  level=level, 
                                                  date_field="Date12.DDMMYYYYhhmm.",
                                                  tz=tz,inpts.file=inpts.file) ###"Etc/GMT+1")
   
+  									 
+										 
+										 
 										 
 #LWnet.W.m2. and SWnet.W.m2. is below the canopy, see also LE and H 
   
- 
-  ivarpoint <- which(lookup_tbl_observation$geotop_where=="PointOutputFile")
-  gnamespoint <- lookup_tbl_observation$geotop_what[ivarpoint]
-  onamespoint <- lookup_tbl_observation$obs_var[ivarpoint]
-  unitpoint <- as.character(lookup_tbl_observation$unit[ivarpoint])
-  names(unitpoint) <- onamespoint
+   
+  		ivarpoint <- which(lookup_tbl_observation$geotop_where=="PointOutputFile") #### & !str_detect(lookup_tbl_observation$geotop_what,"="))
   
-  names(onamespoint) <- gnamespoint
-#  print(names(point_data))
-#  print(gnamespoint)
-#  print(names(point_data) %in% gnamespoint)
-  point_data <- point_data[,names(point_data) %in% gnamespoint]
-  nn <- onamespoint[names(point_data)]
-  names(point_data) <- nn
+  
+  		gnamespoint <- as.character(lookup_tbl_observation$geotop_what[ivarpoint])
+  		onamespoint <- as.character(lookup_tbl_observation$obs_var[ivarpoint])
+  		names(gnamespoint) <- onamespoint
+		
+  ### UNIT
+ 		onamespoint <- lookup_tbl_observation$obs_var[ivarpoint]
+  		
+  
+  		evals_gnamespoint <- lapply(X=gnamespoint,FUN=function(x,envir){
+			 # print(x)
+			  e <- parse(text=x)
+			  # print(e)
+		  	  o <- eval(e,envir=envir)
+			  return(o)
+		  },envir=as.data.frame(point_data))
+  
+  
+  	
+  
+  	time_axis <- index(point_data)
+  	point_data <- as.data.frame(evals_gnamespoint)
+  	point_data <- as.zoo(point_data)
+  	index(point_data) <- time_axis
+  
+	if (!is.null(soil_data)) {
+		
+		start <- index(point_data)[1]
+		index(point_data) <- as.numeric(index(point_data)-start,units="secs")
+		index(soil_data)  <- as.numeric(index(soil_data)-start,units="secs")
+		point_data <- merge(point_data,soil_data)
+		index(point_data) <- index(point_data)+start
+		
+		
+		
+	}
+
+
+	} else {
+		
+
+
+
+
+
+
+
+
+		point_data <- soil_data
+		
+	}
+  
+	uvarp <- unique(c(ivarpoint,ivarsoil))
+	unitpoint <- as.character(lookup_tbl_observation$unit[uvarp])
+	names(unitpoint) <-  as.character(lookup_tbl_observation$obs_var[uvarp])
+  
+  
+  
+  
+  
+#  #print(parse_gnamespoint)
+#  #evals_gnamespoint <- lapply(X=parse_gnamespoint,FUN=eval,envir=as.data.frame(point_data))
+#  return(evals_gnamespoint)
+#  ####eval_gnamespoint <- lapply(X=gnamesponit,FUN=function(x,pf){eval(parse(text=x),envir)},pf=as.data.frame(point_data))
+#  
+  
+#  
+#  names(onamespoint) <- gnamespoint
+##  print(names(point_data))
+##  print(gnamespoint)
+##  print(names(point_data) %in% gnamespoint)
+#  point_data <- point_data[,names(point_data) %in% gnamespoint]
+#  nn <- onamespoint[names(point_data)]
+#  names(point_data) <- nn
   
   
   ##### WRITE OUTPUT 
@@ -169,7 +327,7 @@ GEOtop_ReadValidationData <- function(wpath, obs="ObservationProfileFile", looku
   
   
   
- 	out <- NULL
+ out <- NULL
 	
   
   if (merge.output==TRUE) {
