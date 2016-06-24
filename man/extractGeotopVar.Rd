@@ -4,7 +4,9 @@
 \alias{extractGeotopVar}
 \title{Extract variable from an object returend by \code{\link{GEOtop_ReadValidationData}}}
 \usage{
-extractGeotopVar(x, InputVar = NULL, Add_InputVar = NULL)
+extractGeotopVar(x, InputVar = NULL, Add_InputVar = NULL,
+  aggregate = c("hourly", "daily", "monthly", "yearly"),
+  aggregate_fun = c("mean", "sum"), ...)
 }
 \arguments{
 \item{x}{objectect returned by \code{\link{GEOtop_ReadValidationData}} with \code{merge==TRUE}}
@@ -20,9 +22,13 @@ Extract variable from an object returend by \code{\link{GEOtop_ReadValidationDat
 
 wpath <- '/home/ecor/activity/2016/eurac2016/idra/B2_BeG_017_DVM_001_test_1' 
 
+
 ex <- GEOtop_ReadValidationData(wpath = wpath)
  
 eout <- extractGeotopVar(ex)
+dout <- extractGeotopVar(ex,aggregate="daily")
+mout <-  extractGeotopVar(ex,aggregate="monthly")
+
 
 
 }

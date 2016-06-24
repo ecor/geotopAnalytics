@@ -1,7 +1,7 @@
 ---
-title: "Verification GEOtop point simulation"
-author: "Johannes Brenner"
-date: "25. Juni 2015"
+title: "Verification of a GEOtop point simulation in B2 LTER Site - Match - South Tyrol - Italy"
+author: "Johannes Brenner, Emanuele Cordano"
+date: "June 2016"
 output: html_document
 runtime: shiny
 ---
@@ -101,7 +101,7 @@ alldata <- GEOtop_ReadValidationData(wpath = wpath, save_rData = T)
 obsnames <- attr(alldata,"observation_var")
 simnames <- attr(alldata,"simulation_var")
 
-
+fun_names <- c("min","mean","max","sum")
 ```
 
 #### Interactive Inputs
@@ -110,11 +110,18 @@ simnames <- attr(alldata,"simulation_var")
 inputPanel(
   ##textInput(inputId = "simFolder", label = "Simulation folder", value = ""),
   
-  selectInput(inputId = "variable", label = "discover variable", choices = obsnames,selected=obsnames[1]),
+  selectInput(inputId = "variable", label = "discover variable", choices = obsnames,selected=obsnames[8]),
   
-  selectInput(inputId = "add_variable", label = "additional variable (sim)", choices = simnames, selected = simnames[1])
+  selectInput(inputId = "add_variable", label = "additional variable (sim)", choices = simnames, selected = simnames[2]),
   
-#  radioButtons(inputId = "aggregation", label = "aggregation", choices = c("hour","day","month"), selected = "day", inline = FALSE),
+  radioButtons(inputId = "aggregation", label = "aggregation", choices = c("hourly","daily","monthly"), selected = "hourly", inline = FALSE),
+  
+  selectInput(inputId = "aggregation_function_var", label = "Aggregation Function", choices = fun_names, selected = "mean"),
+  
+  selectInput(inputId = "aggregation_function_add_var", label = "Aggregation Function (add_var)", choices = fun_names, selected = "sum")
+  
+  
+  
   
 #  radioButtons(inputId = "flux_amount", label = "flux or amount", choices = c("flux","amount"), selected = "flux", inline = FALSE)
   
@@ -128,7 +135,7 @@ inputPanel(
 
 #### Time Series Plot
 
-Cumulated timeseries are only provided for daily data aggregation. Check if your variable of interest is a flux or an amount!
+Dynamic plots of observed vs simulated time series. 
 
 ```{r, echo=FALSE}
 
@@ -139,16 +146,23 @@ renderDygraph({
   ## TO GO ON .....
   	iiv <- input$variable
   	aiiv <- input$add_variable
-    data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv) 
+  	aggregation <- input$aggregation
+  	aggr_fun_1 <- input$aggregation_function_var
+  	aggr_fun_2 <-  input$aggregation_function_add_var
+    data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv,aggregate=aggregation,aggregate_fun=c(aggr_fun_1,aggr_fun_2)) 
     unit <- attr(alldata,"var_unit")[iiv]
     add_unit <- attr(alldata,"var_unit")[aiiv]
     ## 
     
-    dygraph(data, ylab=paste("[",unit,"]",sep="")) %>%
-      dyRangeSelector() %>%
-      dyRoller() %>%
-      dySeries(name = "additional var", axis = "y2", stepPlot = TRUE, fillGraph = TRUE, label = paste("[-",add_unit,"]",sep=""))
-    
+   dygraph(data, ylab=paste(iiv,"[",unit,"]",sep="")) %>%
+		dyRangeSelector() %>%
+		dyRoller() %>%
+		dySeries(name = "additional.var", axis = "y2", stepPlot = TRUE, fillGraph = TRUE, label = paste(aiiv,"[",add_unit,"]",sep="")) %>%
+		dyAxis(name="y2",label=paste("[",add_unit,"]",sep=""))
+
+
+
+
 #  }
  
 })
@@ -159,7 +173,7 @@ renderDygraph({
 
 ####Summary Table on Goodness of Fit (GOF)
 
-Measures for GOF are given for seasons and for the whole data series. Calculation were performed with the hydroGOF R-Package. Type ?gof in RStudio for information on specific GOFs.
+Measures for GOF are given for seasons and for the whole data series. Calculations were performed with the hydroGOF R-Package. Type ?gof in the R console for information on specific GOFs.
 
 ```{r, echo=FALSE}
 
@@ -193,9 +207,20 @@ renderDataTable({
   
 #  data <- merge(observation, simulation)
  
-  iiv <- input$variable
-  aiiv <- input$add_variable
-  nnn <- c("simulation","observation")
+ iiv <- input$variable
+    aiiv <- input$add_variable
+  	nnn <- c("simulation","observation")
+  	
+  	aggregation <- input$aggregation
+  	aggr_fun_1 <- input$aggregation_function_var
+  	aggr_fun_2 <-  input$aggregation_function_add_var
+    data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv,aggregate=aggregation,aggregate_fun=c(aggr_fun_1,aggr_fun_2)) 
+    
+  	data <- data[,nnn]
+ 
+  
+  
+  
   data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv)[,nnn]
   
   gofs <- gofg(sim = data$simulation, obs=data$observation, na.rm = TRUE)
@@ -231,7 +256,13 @@ renderPlot({
 	iiv <- input$variable
     aiiv <- input$add_variable
   	nnn <- c("simulation","observation")
-  	data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv)[,nnn]
+  	
+  	aggregation <- input$aggregation
+  	aggr_fun_1 <- input$aggregation_function_var
+  	aggr_fun_2 <-  input$aggregation_function_add_var
+    data <- extractGeotopVar(x=alldata,InputVar=iiv,Add_InputVar=aiiv,aggregate=aggregation,aggregate_fun=c(aggr_fun_1,aggr_fun_2)) 
+    
+  	data <- data[,nnn]
 	
 	if (all(is.na(data$observation))==TRUE) {
 	
