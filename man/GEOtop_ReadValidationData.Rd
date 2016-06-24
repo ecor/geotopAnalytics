@@ -18,11 +18,15 @@ GEOtop_ReadValidationData(wpath, obs = "ObservationProfileFile",
 
 \item{soil_files}{boolean, \code{TRUE}: soil files are provided as GEOtop input. \code{FALSE}: soil is parameterized in the geotop.inpts file}
 
-\item{save_rData}{boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)}
+\item{save_rData}{(OBSOLATE)boolean, if \code{TRUE} (default) data is stored in working directory (simulation folder)}
 
 \item{tz}{time zone, see \code{\link{get.geotop.inpts.keyword.value}}. Default is \code{"Etc/GMT-1"}.}
 
 \item{level}{check point index. Default is 1. See \code{\link{get.geotop.inpts.keyword.value}}}
+
+\item{inpts.file}{name of the GEOtop configuration file. Default is \code{"geotop.inpts"}}
+
+\item{merge.output}{logical. If it is \code{TRUE}, the output is a marged in a unique \code{zoo} object.}
 }
 \description{
 Read point output from GEOtop for verification of the model results
@@ -44,5 +48,8 @@ out <- GEOtop_ReadValidationData(wpath = wpath , save_rData = TRUE)
 }
 \author{
 Johannes Brenner,Emanuele Cordano
+}
+\seealso{
+\code{\link{get.geotop.inpts.keyword.value}}
 }
 

@@ -7,7 +7,7 @@
 gofg(sim, obs, ...)
 }
 \arguments{
-\item{sim, obs...}{argument for \code{\link{gof}}}
+\item{sim, obs, ...}{argument for \code{\link{gof}}}
 }
 \description{
 Wrapper function for GOf function

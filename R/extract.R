@@ -4,8 +4,12 @@ NULL
 #' @param x objectect returned by \code{\link{GEOtop_ReadValidationData}} with \code{merge==TRUE}
 #' @param InputVar discover variable
 #' @param Add_InputVar additional variable (simulated) 
+#' @param aggregate aggregate option. Default it is \code{c("hourly","daily","monthly","yearly")} and it is considered the first element. 
+#' @param aggregate_fun aggregate function for \code{InputVar} and \code{Add_InputVar} respectively. Deafault is \code{c("mean","sum")}.
+#' @param ... further arguments
 #' 
 #' @export 
+#' @note It is assumed that \code{x} already contains hourly aggregated time series, so in case \code{aggregare=="hourly"} no aggragetion is calculated.
 #' @examples 
 #' 
 #' wpath <- '/home/ecor/activity/2016/eurac2016/idra/B2_BeG_017_DVM_001_test_1' 

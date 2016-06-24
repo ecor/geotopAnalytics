@@ -5,7 +5,7 @@
 #' 
 #' Wrapper function for GOf function 
 #' 
-#' @param sim,obs... argument for \code{\link{gof}}
+#' @param sim,obs,... argument for \code{\link{gof}}
 #' 
 #' @export
 #' @importFrom hydroGOF gof
